@@ -19,6 +19,7 @@ function Player:new(x, y)
     instance.speed = 64
     instance.health = 100
     instance.maxHealth = 100
+    instance.drillPower = 25
     
     return instance
 end
@@ -45,9 +46,9 @@ end
 
 function Player:onCollision(other)
     -- Player-specific collision behavior
-    if other.type == "planet" then
-        local cellsDestroyed = other:destroyCells(self.x, self.y, self.width/2)
-    end
+    -- if other.type == "planet" then
+    --     local cellsDestroyed = other:destroyCells(self.x, self.y, self.width/2)
+    -- end
 end
 
 return Player

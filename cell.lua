@@ -30,4 +30,43 @@ function Cell:update(dt)
     -- Optional: Override in child classes
 end
 
+function Cell:checkCollision(other)
+    -- Precise AABB collision using Entity's method
+    return Entity.checkCollision(self, other)
+end
+
+function Cell:onCollision(player)
+    if self.health > 0 then
+        -- 1. Damage cell
+        self.health = self.health - player.drillPower
+
+        -- Check cell is solid
+        if self.solid then
+            local dx = player.x - self.x
+            local dy = player.y - self.y
+            local combinedW = (player.width + self.size) / 2
+            local combinedH = (player.height + self.size) / 2
+            local overlapX = combinedW - math.abs(dx)
+            local overlapY = combinedH - math.abs(dy)
+            
+            --Push player out along smallest axis
+            if overlapX < overlapY then
+                if dx > 0 then -- Player is to the right
+                    player.x = self.x + combinedW
+                else -- Player is to the left
+                    player.x = self.x - combinedW
+                end
+            else
+                if dy > 0 then -- Player is below
+                    player.y = self.y + combinedH
+                else -- Player is above
+                    player.y = self.y - combinedH
+                end
+            end
+        end
+        return true
+    end
+    return false
+end
+
 return Cell

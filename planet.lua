@@ -34,10 +34,16 @@ function Planet:generateCells()
                 local cell = Cell:new(self.x + i, self.y + j, self)
                 if i^2 + j^2 <= (self.radius*0.25)^2 then
                     cell.color = self.coreColor
+                    cell.type = "core"
+                    cell.health = 500
                 elseif i^2 + j^2 <= (self.radius*0.85)^2 then
                     cell.color = self.mantelColor
+                    cell.type = "mantel"
+                    cell.health = 200
                 else
                     cell.color = self.CrustColor
+                    cell.type = "crust"
+                    cell.health = 50
                 end
                 
                 -- Store in both list and grid
@@ -82,10 +88,12 @@ function Planet:destroyCells(x, y, radius)
                     (x - cell.x)^2 + 
                     (y - cell.y)^2
                 )
-                if dist <= radius*1.5 then
-                    cell.health = 0
-                    self.cellGrid[gridX][gridY] = nil
-                    cellsDestroyed = cellsDestroyed + 1
+                if dist <= radius*1.5 then -- padding on radius for diagonals
+                    cell.health = cell.health - 1
+                    if cell.health <= 0 then
+                        self.cellGrid[gridX][gridY] = nil
+                        cellsDestroyed = cellsDestroyed + 1
+                    end
                 end
             end
         end
@@ -101,4 +109,6 @@ function Planet:destroyCells(x, y, radius)
     
     return cellsDestroyed
 end
+
+
 return Planet

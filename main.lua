@@ -33,10 +33,35 @@ function love.update(dt)
         entity:update(dt)
     end
     
-    -- Collision detection (simplified)
+    -- Special collision handling
+    for _, player in ipairs(entities) do
+        if player.type == "player" then
+            for _, planet in ipairs(entities) do
+                if planet.type == "planet" then
+                    -- Check against planet cells instead of planet itself
+                    local gridX = math.floor((player.x - planet.x) / planet.cellSize)
+                    local gridY = math.floor((player.y - planet.y) / planet.cellSize)
+                    
+                    -- Check 3x3 area around player
+                    for x = gridX-1, gridX+1 do
+                        for y = gridY-1, gridY+1 do
+                            if planet.cellGrid[x] and planet.cellGrid[x][y] then
+                                local cell = planet.cellGrid[x][y]
+                                if cell:checkCollision(player) then
+                                    cell:onCollision(player)
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    
+    -- Regular entity collisions (for non-planet entities)
     for i, entity1 in ipairs(entities) do
         for j, entity2 in ipairs(entities) do
-            if i ~= j then
+            if i ~= j and entity1.type ~= "player" and entity2.type ~= "planet" then
                 if entity1:checkCollision(entity2) then
                     entity1:onCollision(entity2)
                 end
