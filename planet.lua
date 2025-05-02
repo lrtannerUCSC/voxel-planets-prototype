@@ -11,9 +11,9 @@ function Planet:new(x, y, radius)
     
     -- Planet-specific properties
     instance.type = "planet"
-    instance.coreColor = {1, 0, 0}  -- Red
-    instance.mantelColor = {0, 1, 0}  -- Green
-    instance.CrustColor = {0, 0, 1}  -- Blue
+    instance.coreColor = {0.98, 0.94, 0.75}  -- Bright pale yellow
+    instance.mantelColor = {0.85, 0.15, 0.1} -- Deep volcanic red
+    instance.CrustColor = {0.3, 0.7, 0.35}   -- Fresh grass green
     instance.radius = radius
     instance.width = radius * 2
     instance.height = radius * 2
@@ -69,7 +69,6 @@ function Planet:draw()
     end
 end
 
--- In planet.lua
 function Planet:destroyCells(x, y, radius)
     local cellsDestroyed = 0
     local gridRadius = math.ceil(radius / self.cellSize)
@@ -109,6 +108,5 @@ function Planet:destroyCells(x, y, radius)
     
     return cellsDestroyed
 end
-
 
 return Planet

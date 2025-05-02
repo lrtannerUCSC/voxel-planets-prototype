@@ -26,10 +26,6 @@ function Cell:draw()
     )
 end
 
-function Cell:update(dt)
-    -- Optional: Override in child classes
-end
-
 function Cell:checkCollision(other)
     -- Precise AABB collision using Entity's method
     return Entity.checkCollision(self, other)
@@ -37,8 +33,20 @@ end
 
 function Cell:onCollision(player)
     if self.health > 0 then
-        -- 1. Damage cell
+        -- Damage cell
         self.health = self.health - player.drillPower
+
+        if self.health <= 0 then
+            local moneyEarned
+            if self.type == "core" then
+                moneyEarned = 10
+            elseif self.type == "mantel" then
+                moneyEarned = 5
+            elseif self.type == "crust" then
+                moneyEarned = 1
+            end
+            player.money = player.money + moneyEarned
+        end
 
         -- Check cell is solid
         if self.solid then
