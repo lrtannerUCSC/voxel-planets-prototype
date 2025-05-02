@@ -15,6 +15,7 @@ function Player:new(x, y)
     instance.thrustForce = 400
     instance.maxSpeed = 250
     instance.damping = 0.96
+    instance.currentSpeed = 0
     
     -- Physics properties
     instance.gravityScale = 1.0
@@ -39,30 +40,23 @@ function Player:new(x, y)
 end
 
 function Player:update(dt)
-    -- Rotation control (A/D keys)
-    -- if love.keyboard.isDown("a") then
-    --     self.facingAngle = self.facingAngle - self.rotationSpeed * dt
-    -- end
-    -- if love.keyboard.isDown("d") then
-    --     self.facingAngle = self.facingAngle + self.rotationSpeed * dt
-    -- end
-    
-    -- Mouse-facing control
+    -- Mouse-facing control (keep existing)
     local mouseX, mouseY = love.mouse.getPosition()
     local dx = mouseX - self.x
     local dy = mouseY - self.y
     self.facingAngle = math.atan2(dy, dx)
+    
     -- Thrust control (W key or mouse click)
-    local thrusting = false
     if love.keyboard.isDown("w") or love.mouse.isDown(1) then
         local thrustX = math.cos(self.facingAngle) * self.thrustForce * dt
         local thrustY = math.sin(self.facingAngle) * self.thrustForce * dt
+
+        -- Apply thrust
         self.velocity.x = self.velocity.x + thrustX
         self.velocity.y = self.velocity.y + thrustY
-        thrusting = true
     end
     
-    -- Check planets for gravity/immersion
+    -- Apply gravity
     self.inPlanet = false
     for _, entity in ipairs(love.entities) do
         if entity.type == "planet" then
@@ -72,42 +66,25 @@ function Player:update(dt)
             
             if distance < entity.radius then
                 self.inPlanet = true
-                self.color = {1, 0, 1}  -- Purple when inside planet
+                self.color = {1, 0, 1}
             else
-                -- Apply gravity if outside
+                -- Stronger gravity when closer
+                local gravityStrength = (entity.radius^2 / distance) * 5 * dt
                 local gravityDir = {x = dx/distance, y = dy/distance}
-                local gravityStrength = entity.radius * 2 * dt
                 self.velocity.x = self.velocity.x - gravityDir.x * gravityStrength
                 self.velocity.y = self.velocity.y - gravityDir.y * gravityStrength
             end
         end
     end
     
-    -- Default color when not in planet
-    if not self.inPlanet then
-        self.color = {1, 1, 1}
-    end
-    
-    -- Apply damping when not thrusting
-    -- if not thrusting then
-    --     self.velocity.x = self.velocity.x * self.damping
-    --     self.velocity.y = self.velocity.y * self.damping
-    -- end
-    
-    -- Limit speed
-    local speed = math.sqrt(self.velocity.x^2 + self.velocity.y^2)
-    if speed > self.maxSpeed then
-        self.velocity.x = (self.velocity.x / speed) * self.maxSpeed
-        self.velocity.y = (self.velocity.y / speed) * self.maxSpeed
-    end
-    
-    -- Update position
+    -- Update position and screen bounds (keep existing)
     self.x = self.x + self.velocity.x * dt
     self.y = self.y + self.velocity.y * dt
-    
-    -- Screen bounds
     self.x = math.clamp(self.x, self.width/2, love.graphics.getWidth() - self.width/2)
     self.y = math.clamp(self.y, self.height/2, love.graphics.getHeight() - self.height/2)
+    
+    -- Store current speed for HUD/debug
+    self.currentSpeed = math.sqrt(self.velocity.x^2 + self.velocity.y^2)
 end
 
 function Player:draw()

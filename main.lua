@@ -3,8 +3,13 @@ local Entity = require("entity")
 local Planet = require("planet")
 local Player = require("player")
 
+-- Set random seed based on current time
+math.randomseed(os.time())
+if love.math then
+    love.math.setRandomSeed(os.time())
+end
+
 local player
--- Game state
 local entities = {}
 
 -- Initialize the game
@@ -13,12 +18,12 @@ function love.load()
 
     love.entities = entities  -- Make entities accessible globally
 
-    local planet1 = Planet:new(200, 300, 124) -- Make multiple of cell size
-    table.insert(entities, planet1)
-    -- local planet2 = Planet:new(100, 100, 60)
-    -- table.insert(entities, planet2)
-    -- local planet3 = Planet:new(600, 300, 60)
-    -- table.insert(entities, planet3)
+    -- Basic planet to test with
+    -- local planet1 = Planet:new(200, 300, 124) -- Make multiple of cell size
+    -- table.insert(entities, planet1)
+
+    generateRandomPlanets(5)
+
 
     player = Player:new(love.graphics.getWidth() / 2, love.graphics.getHeight() / 2)
     table.insert(entities, player)
@@ -63,17 +68,6 @@ function love.update(dt)
             end
         end
     end
-    
-    -- Regular entity collisions (for non-planet entities)
-    -- for i, entity1 in ipairs(entities) do
-    --     for j, entity2 in ipairs(entities) do
-    --         if i ~= j and entity1.type ~= "player" and entity2.type ~= "planet" then
-    --             if entity1:checkCollision(entity2) then
-    --                 entity1:onCollision(entity2)
-    --             end
-    --         end
-    --     end
-    -- end
  
     -- Remove inactive entities
     for i = #entities, 1, -1 do
@@ -83,9 +77,7 @@ function love.update(dt)
     end
 end
 
--- Draw the game
 function love.draw()
-    -- Clear the screen
     love.graphics.clear(0.2, 0.2, 0.2)
     
     -- Draw all entities
@@ -97,6 +89,7 @@ function love.draw()
     love.graphics.setColor(1, 1, 1)
     love.graphics.print("Voxel Planet Demo - Move with WASD", 10, 10)
     love.graphics.print("Player Goobs: " .. player.money, love.graphics.getWidth() - 150, 10)
+    love.graphics.print("Player Speed: " .. math.floor(player.currentSpeed), love.graphics.getWidth() - 150, 50)
 end
 
 -- Input handling
@@ -104,4 +97,50 @@ function love.keypressed(key)
     if key == "escape" then
         love.event.quit()
     end
+end
+
+function generateRandomPlanets(count)
+    local planets = {}
+    table.insert(planets, { -- Avoid spawning on player
+        x = love.graphics.getWidth() / 2,
+        y = love.graphics.getHeight() / 2,
+        radius = 124
+    })
+    local attempts = 0
+    local maxAttempts = 100  -- Prevent infinite loops
+    
+    while #planets < count and attempts < maxAttempts do
+        local x = math.random(100, love.graphics.getWidth() - 100)
+        local y = math.random(100, love.graphics.getHeight() - 100)
+        local radius = math.random(60, 124)
+        while radius % 8 ~= 4 do -- Make sure radius is a multiple of cell size
+            radius = math.random(60, 124)
+        end
+        if isPositionValid(x, y, radius, planets) then
+            table.insert(planets, {
+                x = x, y = y, radius = radius,
+                -- Store other planet properties here if needed
+            })
+            table.insert(entities, Planet:new(x, y, radius))
+        end
+        attempts = attempts + 1
+    end
+    
+    if attempts >= maxAttempts then
+        print("Warning: Could only place", #planets, "out of", count, "planets")
+    end
+end
+
+function isPositionValid(x, y, radius, planetList)
+    for _, planet in ipairs(planetList) do
+        local dx = x - planet.x
+        local dy = y - planet.y
+        local distance = math.sqrt(dx*dx + dy*dy)
+        local minDistance = radius + planet.radius + 20  -- +20 padding
+        
+        if distance < minDistance then
+            return false  -- Overlaps with an existing planet
+        end
+    end
+    return true  -- Position is safe
 end
