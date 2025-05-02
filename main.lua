@@ -1,6 +1,3 @@
--- main.lua
--- Entity-based programming demo for Love2D
-
 -- Load required libraries and modules
 local Entity = require("entity")
 local Planet = require("planet")
@@ -12,14 +9,16 @@ local entities = {}
 
 -- Initialize the game
 function love.load()
+    love.window.setMode(1280, 720)  -- Width, Height
+
     love.entities = entities  -- Make entities accessible globally
 
     local planet1 = Planet:new(200, 300, 124) -- Make multiple of cell size
     table.insert(entities, planet1)
-    local planet2 = Planet:new(100, 100, 60)
-    table.insert(entities, planet2)
-    local planet3 = Planet:new(600, 300, 60)
-    table.insert(entities, planet3)
+    -- local planet2 = Planet:new(100, 100, 60)
+    -- table.insert(entities, planet2)
+    -- local planet3 = Planet:new(600, 300, 60)
+    -- table.insert(entities, planet3)
 
     player = Player:new(love.graphics.getWidth() / 2, love.graphics.getHeight() / 2)
     table.insert(entities, player)

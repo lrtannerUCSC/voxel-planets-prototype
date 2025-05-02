@@ -35,11 +35,11 @@ function Planet:generateCells()
                 if i^2 + j^2 <= (self.radius*0.25)^2 then
                     cell.color = self.coreColor
                     cell.type = "core"
-                    cell.health = 500
+                    cell.health = 250
                 elseif i^2 + j^2 <= (self.radius*0.85)^2 then
                     cell.color = self.mantelColor
                     cell.type = "mantel"
-                    cell.health = 200
+                    cell.health = 100
                 else
                     cell.color = self.CrustColor
                     cell.type = "crust"
