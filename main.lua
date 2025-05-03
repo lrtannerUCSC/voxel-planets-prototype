@@ -1,4 +1,5 @@
 -- Load required libraries and modules
+local World = require("world")
 local Entity = require("entity")
 local Planet = require("planet")
 local Player = require("player")
@@ -9,58 +10,62 @@ if love.math then
     love.math.setRandomSeed(os.time())
 end
 
+-- Global variables
+local world
 local player
+local camera
 local entities = {}
 
 -- Initialize the game
 function love.load()
-    love.window.setMode(1280, 720)  -- Width, Height
+    entities = {}  -- Clear global table
+    love.entities = entities
+    love.window.setMode(1280, 720)
+    math.randomseed(os.time())
 
-    love.entities = entities  -- Make entities accessible globally
+    world = World:new()
+    world:loadChunk(0, 0)  -- Load initial chunk
 
-    -- Basic planet to test with
-    -- local planet1 = Planet:new(200, 300, 124) -- Make multiple of cell size
-    -- table.insert(entities, planet1)
-
-    generateRandomPlanets(5)
-
-
-    player = Player:new(love.graphics.getWidth() / 2, love.graphics.getHeight() / 2)
-    table.insert(entities, player)
+    -- Spawn player
+    player = Player:new(World.CHUNK_SIZE / 2, World.CHUNK_SIZE / 2)
+    table.insert(entities, player)  -- Only the player is global
+    camera = { x = 0, y = 0, scale = 1 }
 end
 
 function love.update(dt)
-    -- Update all entities
-    for _, entity in ipairs(entities) do
-        entity:update(dt)
-    end
     
-    for _, player in ipairs(entities) do
-        if player.type == "player" then
-            for _, planet in ipairs(entities) do
-                if planet.type == "planet" then
-                    -- Calculate how many cells we need to check
-                    local cellsHoriz = math.ceil(player.width / planet.cellSize) + 1
-                    local cellsVert = math.ceil(player.height / planet.cellSize) + 1
-                    
-                    -- Get player's grid position
-                    local gridX = math.floor((player.x - planet.x) / planet.cellSize)
-                    local gridY = math.floor((player.y - planet.y) / planet.cellSize)
-                    
-                    -- Calculate check bounds
-                    local startX = gridX - math.floor(cellsHoriz/2)
-                    local endX = gridX + math.floor(cellsHoriz/2)
-                    local startY = gridY - math.floor(cellsVert/2)
-                    local endY = gridY + math.floor(cellsVert/2)
-                    
-                    -- Check dynamically sized grid
-                    for x = startX, endX do
-                        for y = startY, endY do
-                            if planet.cellGrid[x] and planet.cellGrid[x][y] then
-                                local cell = planet.cellGrid[x][y]
-                                if cell:checkCollision(player) then
-                                    cell:onCollision(player)
-                                end
+    world:update(player.x, player.y)
+    player:update(dt, world)
+    -- -- Update all entities (player is in this table)
+    -- for _, entity in ipairs(entities) do
+    --     entity:update(dt)
+    -- end
+    
+    -- Check player collision with planets from ACTIVE CHUNKS
+    for _, chunk in pairs(world.activeChunks) do
+        for _, planet in ipairs(chunk.entities) do
+            if planet.type == "planet" then
+                -- Calculate how many cells to check
+                local cellsHoriz = math.ceil(player.width / planet.cellSize) + 1
+                local cellsVert = math.ceil(player.height / planet.cellSize) + 1
+                
+                -- Get player's grid position relative to planet
+                local gridX = math.floor((player.x - planet.x) / planet.cellSize)
+                local gridY = math.floor((player.y - planet.y) / planet.cellSize)
+                
+                -- Calculate check bounds
+                local startX = gridX - math.floor(cellsHoriz/2)
+                local endX = gridX + math.floor(cellsHoriz/2)
+                local startY = gridY - math.floor(cellsVert/2)
+                local endY = gridY + math.floor(cellsVert/2)
+                
+                -- Check each cell in the grid
+                for x = startX, endX do
+                    for y = startY, endY do
+                        if planet.cellGrid[x] and planet.cellGrid[x][y] then
+                            local cell = planet.cellGrid[x][y]
+                            if cell:checkCollision(player) then
+                                cell:onCollision(player)
                             end
                         end
                     end
@@ -68,8 +73,10 @@ function love.update(dt)
             end
         end
     end
- 
-    -- Remove inactive entities
+
+    updateCamera(dt)
+    
+    -- Cleanup inactive entities (if needed)
     for i = #entities, 1, -1 do
         if not entities[i].active then
             table.remove(entities, i)
@@ -79,17 +86,33 @@ end
 
 function love.draw()
     love.graphics.clear(0.2, 0.2, 0.2)
+
+    -- Apply camera transform
+    love.graphics.push()
+    love.graphics.translate(-camera.x, -camera.y)
+    love.graphics.scale(camera.scale)
     
-    -- Draw all entities
-    for _, entity in ipairs(entities) do
-        entity:draw()
+    -- Draw visible chunks
+    for _, chunk in pairs(world.activeChunks) do
+        for _, entity in ipairs(chunk.entities) do
+            -- Custom draw logic per entity type
+            entity:draw()
+        end
     end
+    player:draw()
+
+    -- -- Draw all entities
+    -- for _, entity in ipairs(entities) do
+    --     entity:draw()
+    -- end
 
     -- Draw HUD
     love.graphics.setColor(1, 1, 1)
     love.graphics.print("Voxel Planet Demo - Move with WASD", 10, 10)
     love.graphics.print("Player Goobs: " .. player.money, love.graphics.getWidth() - 150, 10)
     love.graphics.print("Player Speed: " .. math.floor(player.currentSpeed), love.graphics.getWidth() - 150, 50)
+
+    love.graphics.pop()
 end
 
 -- Input handling
@@ -136,11 +159,20 @@ function isPositionValid(x, y, radius, planetList)
         local dx = x - planet.x
         local dy = y - planet.y
         local distance = math.sqrt(dx*dx + dy*dy)
-        local minDistance = radius + planet.radius + 20  -- +20 padding
+        local minDistance = radius + planet.radius + 20 -- Padding
         
         if distance < minDistance then
             return false  -- Overlaps with an existing planet
         end
     end
     return true  -- Position is safe
+end
+
+function updateCamera(dt)
+    -- Smooth follow with deadzone
+    local targetX = player.x - love.graphics.getWidth()/2
+    local targetY = player.y - love.graphics.getHeight()/2
+    
+    camera.x = camera.x + (targetX - camera.x) * 5 * dt
+    camera.y = camera.y + (targetY - camera.y) * 5 * dt
 end

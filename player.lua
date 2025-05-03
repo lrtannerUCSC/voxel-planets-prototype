@@ -1,5 +1,5 @@
 local Entity = require("entity")
-
+local World = require("world")
 local Player = {}
 Player.__index = Player
 setmetatable(Player, {__index = Entity})
@@ -39,51 +39,33 @@ function Player:new(x, y)
     return instance
 end
 
-function Player:update(dt)
-    -- Mouse-facing control (keep existing)
+function Player:update(dt, world)  -- Add world parameter
+    -- Mouse-facing control
     local mouseX, mouseY = love.mouse.getPosition()
-    local dx = mouseX - self.x
-    local dy = mouseY - self.y
+    local worldMouseX, worldMouseY = self:screenToWorld(mouseX, mouseY)
+    local dx = worldMouseX - self.x
+    local dy = worldMouseY - self.y
     self.facingAngle = math.atan2(dy, dx)
     
-    -- Thrust control (W key or mouse click)
+    -- Thrust control
     if love.keyboard.isDown("w") or love.mouse.isDown(1) then
         local thrustX = math.cos(self.facingAngle) * self.thrustForce * dt
         local thrustY = math.sin(self.facingAngle) * self.thrustForce * dt
-
-        -- Apply thrust
         self.velocity.x = self.velocity.x + thrustX
         self.velocity.y = self.velocity.y + thrustY
     end
     
-    -- Apply gravity
-    self.inPlanet = false
-    for _, entity in ipairs(love.entities) do
-        if entity.type == "planet" then
-            local dx = self.x - entity.x
-            local dy = self.y - entity.y
-            local distance = math.sqrt(dx^2 + dy^2)
-            
-            if distance < entity.radius then
-                self.inPlanet = true
-                self.color = {1, 0, 1}
-            else
-                -- Stronger gravity when closer
-                local gravityStrength = (entity.radius^2 / distance) * 5 * dt
-                local gravityDir = {x = dx/distance, y = dy/distance}
-                self.velocity.x = self.velocity.x - gravityDir.x * gravityStrength
-                self.velocity.y = self.velocity.y - gravityDir.y * gravityStrength
-            end
-        end
-    end
+    -- Get gravity from WORLD INSTANCE
+    local gravityX, gravityY = world:calculateGravity(self, dt)
     
-    -- Update position and screen bounds (keep existing)
+    -- Apply forces
+    self.velocity.x = self.velocity.x + gravityX
+    self.velocity.y = self.velocity.y + gravityY
+
+    -- Apply velocity to position
     self.x = self.x + self.velocity.x * dt
     self.y = self.y + self.velocity.y * dt
-    self.x = math.clamp(self.x, self.width/2, love.graphics.getWidth() - self.width/2)
-    self.y = math.clamp(self.y, self.height/2, love.graphics.getHeight() - self.height/2)
-    
-    -- Store current speed for HUD/debug
+
     self.currentSpeed = math.sqrt(self.velocity.x^2 + self.velocity.y^2)
 end
 
@@ -118,6 +100,18 @@ end
 
 function math.clamp(n, min, max)
     return math.min(math.max(n, min), max)
+end
+
+function Player:screenToWorld(screenX, screenY)
+    -- Get camera offset (assuming camera follows player)
+    local cameraX, cameraY = self.x - love.graphics.getWidth() / 2, 
+                            self.y - love.graphics.getHeight() / 2
+    
+    -- Convert screen position to world position
+    local worldX = screenX + cameraX
+    local worldY = screenY + cameraY
+    
+    return worldX, worldY
 end
 
 return Player

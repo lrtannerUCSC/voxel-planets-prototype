@@ -1,6 +1,8 @@
 -- entity.lua
 -- Base Entity class for all game objects
-
+-- local World = require("world")
+-- local CHUNK_SIZE = World.CHUNK_SIZE
+local CHUNK_SIZE = 2048
 local Entity = {}
 Entity.__index = Entity
 
@@ -64,6 +66,11 @@ function Entity:getInfo()
         size = {width = self.width, height = self.height},
         id = self.id
     }
+end
+
+function Entity:getRenderPosition()
+    return self.x % CHUNK_SIZE, 
+           self.y % CHUNK_SIZE
 end
 
 return Entity
