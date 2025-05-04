@@ -33,7 +33,7 @@ end
 
 function Cell:onCollision(player)
     if self.health > 0 then
-        -- Damage cell
+        -- Damage cell based on drill power
         self.health = self.health - player.drillPower
 
         if self.health <= 0 then
@@ -50,6 +50,10 @@ function Cell:onCollision(player)
 
         -- Check cell is solid
         if self.solid then
+            -- Apply temporary speed reduction (0.5 seconds)
+            player.speedReductionTimer = 1
+            
+            -- Push player out of collision
             local dx = player.x - self.x
             local dy = player.y - self.y
             local combinedW = (player.width + self.size) / 2
@@ -57,7 +61,7 @@ function Cell:onCollision(player)
             local overlapX = combinedW - math.abs(dx)
             local overlapY = combinedH - math.abs(dy)
             
-            --Push player out along smallest axis
+            -- Push player out along smallest axis
             if overlapX < overlapY then
                 if dx > 0 then -- Player is to the right
                     player.x = self.x + combinedW

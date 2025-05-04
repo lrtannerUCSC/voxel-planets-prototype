@@ -13,9 +13,10 @@ function Player:new(x, y)
     instance.facingAngle = 0  -- In radians
     instance.rotationSpeed = 4  -- How fast the player turns
     instance.thrustForce = 400
-    instance.maxSpeed = 250
+    instance.maxSpeed = 400
     instance.damping = 0.96
     instance.currentSpeed = 0
+    instance.baseSpeed = 0  -- Track speed before any reductions
     
     -- Physics properties
     instance.gravityScale = 1.0
@@ -35,11 +36,12 @@ function Player:new(x, y)
     instance.health = 100
     instance.drillPower = 25
     instance.money = 0
+    instance.speedReductionTimer = 0  -- Timer for speed reduction
     
     return instance
 end
 
-function Player:update(dt, world)  -- Add world parameter
+function Player:update(dt, world)
     -- Mouse-facing control
     local mouseX, mouseY = love.mouse.getPosition()
     local worldMouseX, worldMouseY = self:screenToWorld(mouseX, mouseY)
@@ -62,11 +64,27 @@ function Player:update(dt, world)  -- Add world parameter
     self.velocity.x = self.velocity.x + gravityX
     self.velocity.y = self.velocity.y + gravityY
 
+    -- Update base speed (before any reductions)
+    self.baseSpeed = math.sqrt(self.velocity.x^2 + self.velocity.y^2)
+    
+    -- Apply speed reduction if active
+    if self.speedReductionTimer > 0 then
+        self.speedReductionTimer = self.speedReductionTimer - dt
+        self.currentSpeed = math.max(self.baseSpeed * 0.25, 50) -- MAGIC NUMBER FOR SPEED REDUCTION
+    else
+        self.currentSpeed = self.baseSpeed
+    end
+
     -- Apply velocity to position
     self.x = self.x + self.velocity.x * dt
     self.y = self.y + self.velocity.y * dt
 
-    self.currentSpeed = math.sqrt(self.velocity.x^2 + self.velocity.y^2)
+    self:updateDrillSpeed()
+end
+
+function Player:updateDrillSpeed()
+    -- Drill power scales with speed, but has a minimum value
+    self.drillPower = math.max(10, self.currentSpeed / 4)
 end
 
 function Player:draw()

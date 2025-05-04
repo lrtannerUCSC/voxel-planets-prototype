@@ -47,16 +47,25 @@ end
 
 function World:saveChunk(x, y)
     local key = self:positionToKey(x, y)
-    print("saving chunk", key, self.activeChunks[key])
-    local chunkData = self:sanitizeForSave(key)
+    if not self.activeChunks[key] then return false end
     
+    local chunkData = self:sanitizeForSave(key)
     local jsonData, err = json.encode(chunkData)
     if not jsonData then
         print("JSON encode error:", err)
         return false
     end
     
-    return love.filesystem.write("chunks/"..key..".json", jsonData)
+    -- Use sanitized filename
+    local safeFilename = self:sanitizeFilename(key)
+    love.filesystem.createDirectory("chunks")
+    local success, message = love.filesystem.write("chunks/"..safeFilename..".json", jsonData)
+    if not success then
+        print("Failed to save chunk:", message)
+        return false
+    end
+    
+    return true
 end
 
 function World:sanitizeForSave(key)
@@ -86,35 +95,56 @@ function World:loadChunk(x, y)
     local key = self:positionToKey(x, y)
     
     -- Return if already loaded
-    if self.activeChunks[key] ~= nil then return self.activeChunks[key] end
-    
-    -- Try loading from file
-    local chunkFile = "chunks/"..key..".json"
-    if love.filesystem.getInfo(chunkFile) then
-        local jsonData = love.filesystem.read(chunkFile)
-        local chunkData, pos, err = json.decode(jsonData)
-        
-        if err then
-            print("Failed to decode chunk data:", err)
-            -- Fall back to generation if file is corrupt
-            return self:generateNewChunk(x, y)
-        end
-        
-        self.activeChunks[key] = chunkData
-        self.generatedChunks[key] = true
-        return chunkData
+    if self.activeChunks[key] ~= nil then 
+        return self.activeChunks[key] 
     end
     
-    -- Generate new chunk if never created before
+    -- Try loading from file with sanitized filename
+    local safeFilename = self:sanitizeFilename(key)
+    local chunkFile = "chunks/"..safeFilename..".json"
+    
+    if love.filesystem.getInfo(chunkFile) then
+        local jsonData = love.filesystem.read(chunkFile)
+        local chunkData, _, err = json.decode(jsonData)
+        
+        if not err then
+            -- Reconstruct the chunk (same as before)
+            local reconstructedChunk = {
+                x = chunkData.x,
+                y = chunkData.y,
+                entities = {}
+            }
+            
+            for _, entityData in ipairs(chunkData.entities) do
+                if entityData.type == "planet" then
+                    local planet = Planet:new(
+                        entityData.x,
+                        entityData.y,
+                        entityData.radius
+                    )
+                    table.insert(reconstructedChunk.entities, planet)
+                end
+            end
+            
+            self.activeChunks[key] = reconstructedChunk
+            self.generatedChunks[key] = true
+            return reconstructedChunk
+        end
+        print("Failed to decode chunk data:", err)
+    end
+    
+    -- Generate new chunk if needed
     if not self.generatedChunks[key] then
         local chunk = self:generateNewChunk(x, y)
         self.activeChunks[key] = chunk
         self.generatedChunks[key] = true
-        print("info from chunk", key, self.activeChunks[key])
         return chunk
     end
-    print("chunk exists but not loaded")
-    return nil  -- Chunk exists but isn't currently loaded
+    
+    -- Chunk was previously generated but not saved - regenerate it
+    local chunk = self:generateNewChunk(x, y)
+    self.activeChunks[key] = chunk
+    return chunk
 end
 
 function World:unloadChunk(x, y)
@@ -141,7 +171,7 @@ function World:generateChunkContent(x, y)
     
     -- Generation parameters
     local minPadding = 300  -- Minimum space between planets
-    local maxPlanets = 5    -- Reduced for performance
+    local maxPlanets = 5
     local gridSize = 500    -- Spatial partitioning cell size
     
     -- Create spatial grid
@@ -216,6 +246,7 @@ function World:keyToPosition(key) return key:match("([^:]+):([^:]+)") end
 function World:calculateGravity(player, dt)
     local totalFx, totalFy = 0, 0
     player.inPlanet = false
+    player.color = {1, 1, 1}
     
     if not self.activeChunks then
         print("Warning: activeChunks is nil in calculateGravity")
@@ -236,7 +267,7 @@ function World:calculateGravity(player, dt)
                     player.color = {1, 0, 1} -- Visual feedback
                 else 
                     -- Gravity force (inverse square law)
-                    local force = (entity.radius^2 / distance) * 5 * dt
+                    local force = (entity.radius^2 / distance) * 1 * dt
                     totalFx = totalFx - (dx/distance) * force
                     totalFy = totalFy - (dy/distance) * force
                 end
@@ -245,6 +276,16 @@ function World:calculateGravity(player, dt)
     end
     
     return totalFx, totalFy
+end
+
+-- Replace problematic characters with safe alternatives
+function World:sanitizeFilename(key)
+    return key:gsub(":", "_")  -- Replace colons with underscores
+end
+
+-- Convert back to original key format when loading
+function World:unsanitizeFilename(filename)
+    return filename:gsub("_", ":")
 end
 
 return World

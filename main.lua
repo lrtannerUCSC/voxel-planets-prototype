@@ -87,32 +87,26 @@ end
 function love.draw()
     love.graphics.clear(0.2, 0.2, 0.2)
 
-    -- Apply camera transform
+    -- Apply camera transform (this affects all drawing until pop)
     love.graphics.push()
     love.graphics.translate(-camera.x, -camera.y)
     love.graphics.scale(camera.scale)
     
-    -- Draw visible chunks
+    -- Draw world elements (affected by camera)
     for _, chunk in pairs(world.activeChunks) do
         for _, entity in ipairs(chunk.entities) do
-            -- Custom draw logic per entity type
             entity:draw()
         end
     end
     player:draw()
+    
+    love.graphics.pop() -- End camera transform
 
-    -- -- Draw all entities
-    -- for _, entity in ipairs(entities) do
-    --     entity:draw()
-    -- end
-
-    -- Draw HUD
+    -- Draw UI elements (not affected by camera)
     love.graphics.setColor(1, 1, 1)
     love.graphics.print("Voxel Planet Demo - Move with WASD", 10, 10)
     love.graphics.print("Player Goobs: " .. player.money, love.graphics.getWidth() - 150, 10)
     love.graphics.print("Player Speed: " .. math.floor(player.currentSpeed), love.graphics.getWidth() - 150, 50)
-
-    love.graphics.pop()
 end
 
 -- Input handling
