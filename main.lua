@@ -107,6 +107,8 @@ function love.draw()
     love.graphics.print("Voxel Planet Demo - Move with WASD", 10, 10)
     love.graphics.print("Player Goobs: " .. player.money, love.graphics.getWidth() - 150, 10)
     love.graphics.print("Player Speed: " .. math.floor(player.currentSpeed), love.graphics.getWidth() - 150, 50)
+    love.graphics.print("Player Fuel: " .. math.floor(player.fuel) .. " / " .. player.maxFuel, love.graphics.getWidth() - 150, 90)
+
 end
 
 -- Input handling

@@ -31,52 +31,55 @@ function Cell:checkCollision(other)
     return Entity.checkCollision(self, other)
 end
 
-function Cell:onCollision(player)
+function Cell:onCollision(other)
     if self.health > 0 then
-        -- Damage cell based on drill power
-        self.health = self.health - player.drillPower
+        if other.type == "player" then    
+            -- Damage cell based on drill power
+            self.health = math.max(0, self.health - other.drillPower)
 
-        if self.health <= 0 then
-            local moneyEarned
-            if self.type == "core" then
-                moneyEarned = 10
-            elseif self.type == "mantel" then
-                moneyEarned = 5
-            elseif self.type == "crust" then
-                moneyEarned = 1
+            if self.health <= 0 then
+                local moneyEarned
+                if self.type == "core" then
+                    moneyEarned = 10
+                elseif self.type == "mantel" then
+                    moneyEarned = 5
+                elseif self.type == "crust" then
+                    moneyEarned = 1
+                end
+                other.money = other.money + moneyEarned
+                other.fuel = math.min(other.maxFuel, other.fuel + math.floor(moneyEarned/2))
             end
-            player.money = player.money + moneyEarned
-        end
 
-        -- Check cell is solid
-        if self.solid then
-            -- Apply temporary speed reduction (0.5 seconds)
-            player.speedReductionTimer = 1
-            
-            -- Push player out of collision
-            local dx = player.x - self.x
-            local dy = player.y - self.y
-            local combinedW = (player.width + self.size) / 2
-            local combinedH = (player.height + self.size) / 2
-            local overlapX = combinedW - math.abs(dx)
-            local overlapY = combinedH - math.abs(dy)
-            
-            -- Push player out along smallest axis
-            if overlapX < overlapY then
-                if dx > 0 then -- Player is to the right
-                    player.x = self.x + combinedW
-                else -- Player is to the left
-                    player.x = self.x - combinedW
-                end
-            else
-                if dy > 0 then -- Player is below
-                    player.y = self.y + combinedH
-                else -- Player is above
-                    player.y = self.y - combinedH
+            -- Check cell is solid
+            if self.solid then
+                -- Apply temporary speed reduction (0.5 seconds)
+                other.speedReductionTimer = 1
+                
+                -- Push other out of collision
+                local dx = other.x - self.x
+                local dy = other.y - self.y
+                local combinedW = (other.width + self.size) / 2
+                local combinedH = (other.height + self.size) / 2
+                local overlapX = combinedW - math.abs(dx)
+                local overlapY = combinedH - math.abs(dy)
+                
+                -- Push other out along smallest axis
+                if overlapX < overlapY then
+                    if dx > 0 then -- other is to the right
+                        other.x = self.x + combinedW
+                    else -- other is to the left
+                        other.x = self.x - combinedW
+                    end
+                else
+                    if dy > 0 then -- other is below
+                        other.y = self.y + combinedH
+                    else -- other is above
+                        other.y = self.y - combinedH
+                    end
                 end
             end
+            return true
         end
-        return true
     end
     return false
 end

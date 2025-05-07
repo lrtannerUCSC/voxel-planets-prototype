@@ -12,7 +12,7 @@ function Player:new(x, y)
     instance.velocity = {x = 0, y = 0}
     instance.facingAngle = 0  -- In radians
     instance.rotationSpeed = 4  -- How fast the player turns
-    instance.thrustForce = 400
+    instance.thrustForce = 1000
     instance.maxSpeed = 400
     instance.damping = 0.96
     instance.currentSpeed = 0
@@ -37,6 +37,14 @@ function Player:new(x, y)
     instance.drillPower = 25
     instance.money = 0
     instance.speedReductionTimer = 0  -- Timer for speed reduction
+
+    -- Inventory
+    instance.fuel = 100
+    instance.fuelEfficiency = 1
+    instance.fuelCooldown = 0.05 -- seconds
+    instance.fuelTimer = 0
+    instance.maxFuel = 100
+    instance.inventory = {}
     
     return instance
 end
@@ -51,10 +59,19 @@ function Player:update(dt, world)
     
     -- Thrust control
     if love.keyboard.isDown("w") or love.mouse.isDown(1) then
-        local thrustX = math.cos(self.facingAngle) * self.thrustForce * dt
-        local thrustY = math.sin(self.facingAngle) * self.thrustForce * dt
-        self.velocity.x = self.velocity.x + thrustX
-        self.velocity.y = self.velocity.y + thrustY
+        local currentTime = love.timer.getTime()
+        if currentTime - self.fuelTimer > self.fuelCooldown then
+            if self.fuel > self.fuelEfficiency then
+                self.fuelTimer = currentTime
+                self.fuel = math.min(self.fuel - self.fuelEfficiency, self.maxFuel)
+                local thrustX = math.cos(self.facingAngle) * self.thrustForce * dt
+                local thrustY = math.sin(self.facingAngle) * self.thrustForce * dt
+                self.velocity.x = self.velocity.x + thrustX
+                self.velocity.y = self.velocity.y + thrustY
+            end
+            
+        end
+        
     end
     
     -- Get gravity from WORLD INSTANCE

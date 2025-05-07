@@ -267,7 +267,7 @@ function World:calculateGravity(player, dt)
                     player.color = {1, 0, 1} -- Visual feedback
                 else 
                     -- Gravity force (inverse square law)
-                    local force = (entity.radius^2 / distance) * 1 * dt
+                    local force = (entity.radius^2 / distance) * 0.5 * dt
                     totalFx = totalFx - (dx/distance) * force
                     totalFy = totalFy - (dy/distance) * force
                 end
