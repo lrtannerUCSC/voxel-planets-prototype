@@ -37,6 +37,36 @@ function Player:new(x, y)
     instance.drillPower = 25
     instance.money = 0
     instance.speedReductionTimer = 0  -- Timer for speed reduction
+
+    -- Fuel
+    instance.fuel = 100
+    instance.fuelEfficiency = 1
+    instance.fuelCooldown = 0.05 -- seconds
+    instance.fuelTimer = 0
+    instance.maxFuel = 100
+
+    -- Parts
+    instance.engineUpgrade = 0
+    instance.engineUpgradeApplied = 0
+    instance.engineUpgradeMult = 5 -- instance.thrustForce increase amount
+    
+    instance.armorUpgrade = 0
+    instance.armorUpgradeApplied = 0
+    instance.armorUpgradeMult = 10 -- instance.health increase amount
+    
+    instance.fuelUpgrade = 0
+    instance.fuelUpgradeApplied = 0
+    instance.fuelUpgradeMult = 25 -- instance.fuel increase amount
+    
+    instance.drillUpgrade = 0
+    instance.drillUpgradeApplied = 0
+    instance.drillUpgradeMult = 10 -- instance.drillPower increase amount
+    
+    -- Base stats (to calculate upgrades from)
+    instance.baseThrustForce = instance.thrustForce
+    instance.baseHealth = instance.health
+    instance.baseMaxFuel = instance.maxFuel
+    instance.baseDrillPower = instance.drillPower
     
 
     instance.addResource = function(resourceType, amount)
@@ -56,6 +86,8 @@ function Player:new(x, y)
 end
 
 function Player:update(dt, world)
+    self:checkUpgrades()
+
     -- Mouse-facing control
     local mouseX, mouseY = love.mouse.getPosition()
     local worldMouseX, worldMouseY = self:screenToWorld(mouseX, mouseY)
@@ -65,10 +97,19 @@ function Player:update(dt, world)
     
     -- Thrust control
     if love.keyboard.isDown("w") or love.mouse.isDown(1) then
-        local thrustX = math.cos(self.facingAngle) * self.thrustForce * dt
-        local thrustY = math.sin(self.facingAngle) * self.thrustForce * dt
-        self.velocity.x = self.velocity.x + thrustX
-        self.velocity.y = self.velocity.y + thrustY
+        local currentTime = love.timer.getTime()
+        if currentTime - self.fuelTimer > self.fuelCooldown then
+            if self.fuel > self.fuelEfficiency then
+                self.fuelTimer = currentTime
+                self.fuel = math.min(self.fuel - self.fuelEfficiency, self.maxFuel)
+                local thrustX = math.cos(self.facingAngle) * self.thrustForce * dt
+                local thrustY = math.sin(self.facingAngle) * self.thrustForce * dt
+                self.velocity.x = self.velocity.x + thrustX
+                self.velocity.y = self.velocity.y + thrustY
+            end
+            
+        end
+        
     end
     
     -- Get gravity from WORLD INSTANCE
@@ -146,6 +187,50 @@ function Player:screenToWorld(screenX, screenY)
     return worldX, worldY
 end
 
-
+function Player:checkUpgrades()
+    -- Engine upgrade
+    if self.engineUpgrade ~= self.engineUpgradeApplied then
+        -- Remove previous upgrade bonus
+        self.thrustForce = self.baseThrustForce
+        -- Apply new upgrade bonus
+        self.thrustForce = self.thrustForce + self.engineUpgrade * self.engineUpgradeMult
+        self.engineUpgradeApplied = self.engineUpgrade
+    end
+    
+    -- Armor upgrade
+    if self.armorUpgrade ~= self.armorUpgradeApplied then
+        -- Calculate health percentage to maintain after upgrade
+        local healthPercent = self.health / (self.baseHealth + (self.armorUpgradeApplied * self.armorUpgradeMult))
+        -- Remove previous upgrade bonus
+        self.health = self.baseHealth
+        -- Apply new upgrade bonus
+        self.health = self.health + self.armorUpgrade * self.armorUpgradeMult
+        -- Restore health percentage
+        self.health = self.health * healthPercent
+        self.armorUpgradeApplied = self.armorUpgrade
+    end
+    
+    -- Fuel upgrade
+    if self.fuelUpgrade ~= self.fuelUpgradeApplied then
+        -- Calculate fuel percentage to maintain after upgrade
+        local fuelPercent = self.fuel / (self.baseMaxFuel + (self.fuelUpgradeApplied * self.fuelUpgradeMult))
+        -- Remove previous upgrade bonus
+        self.maxFuel = self.baseMaxFuel
+        -- Apply new upgrade bonus
+        self.maxFuel = self.maxFuel + self.fuelUpgrade * self.fuelUpgradeMult
+        -- Restore fuel percentage
+        self.fuel = self.maxFuel * fuelPercent
+        self.fuelUpgradeApplied = self.fuelUpgrade
+    end
+    
+    -- Drill upgrade
+    if self.drillUpgrade ~= self.drillUpgradeApplied then
+        -- Remove previous upgrade bonus
+        self.drillPower = self.baseDrillPower
+        -- Apply new upgrade bonus
+        self.drillPower = self.drillPower + self.drillUpgrade * self.drillUpgradeMult
+        self.drillUpgradeApplied = self.drillUpgrade
+    end
+end
 
 return Player

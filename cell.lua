@@ -38,6 +38,15 @@ function Cell:onCollision(other)
             self.health = math.max(0, self.health - other.drillPower)
 
             if self.health <= 0 then
+                -- Determine resource type based on cell type
+                local resourceType = self.type -- "core", "mantel", or "crust"
+                local amount = 1
+                
+                -- Add to players inventory
+                if other.addResource then
+                    other.addResource(resourceType, amount)
+                end
+                
                 local moneyEarned
                 if self.type == "core" then
                     moneyEarned = 10
@@ -84,33 +93,33 @@ function Cell:onCollision(other)
     return false
 end
 
-function Cell:onCollision(player)
-    -- If already destroyed or not colliding, do nothing
-    if self.health <= 0 then return end
+-- function Cell:onCollision(player)
+--     -- If already destroyed or not colliding, do nothing
+--     if self.health <= 0 then return end
     
-    -- Apply damage based on players drill 
-    self.health = self.health - player.drillPower * love.timer.getDelta()
+--     -- Apply damage based on players drill 
+--     self.health = self.health - player.drillPower * love.timer.getDelta()
     
-    -- if cell is destroyed add resource to players inventory
-    if self.health <= 0 then
-        -- Determine resource type based on cell type
-        local resourceType = self.type -- "core", "mantel", or "crust"
-        local amount = 1
+--     -- if cell is destroyed add resource to players inventory
+--     if self.health <= 0 then
+--         -- Determine resource type based on cell type
+--         local resourceType = self.type -- "core", "mantel", or "crust"
+--         local amount = 1
         
-        -- Add to players inventory
-        if player.addResource then
-            player.addResource(resourceType, amount)
-        end
+--         -- Add to players inventory
+--         if player.addResource then
+--             player.addResource(resourceType, amount)
+--         end
         
-        -- Add money
-        if self.type == "core" then
-            player.money = player.money + 15
-        elseif self.type == "mantel" then
-            player.money = player.money + 5
-        elseif self.type == "crust" then
-            player.money = player.money + 2
-        end
-    end
-end
+--         -- Add money
+--         if self.type == "core" then
+--             player.money = player.money + 15
+--         elseif self.type == "mantel" then
+--             player.money = player.money + 5
+--         elseif self.type == "crust" then
+--             player.money = player.money + 2
+--         end
+--     end
+-- end
 
 return Cell

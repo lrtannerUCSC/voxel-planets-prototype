@@ -118,12 +118,13 @@ function love.draw()
     love.graphics.pop() -- End camera transform
 
     -- Draw UI elements (not affected by camera)
-    love.graphics.setColor(1, 1, 1)
-    love.graphics.print("Voxel Planet Demo - Move with WASD", 10, 10)
-    love.graphics.print("Player Goobs: " .. player.money, love.graphics.getWidth() - 150, 10)
-    love.graphics.print("Player Speed: " .. math.floor(player.currentSpeed), love.graphics.getWidth() - 150, 50)
-    love.graphics.print("Press TAB to toggle inventory", 10, 30)
-
+    love.graphics.print("Player Goobs: " .. player.money, love.graphics.getWidth() - 170, 10)
+    love.graphics.print("Player Speed: " .. math.floor(player.currentSpeed), love.graphics.getWidth() - 170, 50)
+    love.graphics.print("Player Fuel: " .. math.floor(player.fuel) .. " / " .. player.maxFuel, love.graphics.getWidth() - 170, 90)
+    love.graphics.print("Player engine upgrade: " .. math.floor(player.engineUpgrade), love.graphics.getWidth() - 170, 120)
+    love.graphics.print("Player armor upgrade: " .. math.floor(player.armorUpgrade), love.graphics.getWidth() - 170, 150)
+    love.graphics.print("Player fuel upgrade: " .. math.floor(player.fuelUpgrade), love.graphics.getWidth() - 170, 180)
+    love.graphics.print("Player drill upgrade: " .. math.floor(player.drillUpgrade), love.graphics.getWidth() - 170, 210)
     -- Draw inventory LAST so it appears on top of everything else
     if inventory then
         inventory:draw()

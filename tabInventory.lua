@@ -276,7 +276,7 @@ function TabInventory:useSelectedItem()
     if slot.item.type == "fuel" then
         -- Refill player's fuel
         local amountNeeded = self.player.maxFuel - self.player.fuel
-        local amountToUse = math.min(slot.count, amountNeeded)
+        local amountToUse = math.floor(math.min(slot.count, amountNeeded))
         
         if amountToUse > 0 then
             self.player.fuel = self.player.fuel + amountToUse
