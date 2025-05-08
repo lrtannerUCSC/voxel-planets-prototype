@@ -213,7 +213,11 @@ function TabInventory:draw()
             
             -- item name
             love.graphics.setColor(1, 1, 1, 1)
-            love.graphics.print(slot.item.type, slot.x + 5, slot.y + 5)
+            if (slot.item.type == "upgrade") then
+                love.graphics.print(slot.item.type.."\n"..slot.item.properties.type, slot.x + 5, slot.y + 5)
+            else
+                love.graphics.print(slot.item.type, slot.x + 5, slot.y + 5)
+            end
         end
     end
     
@@ -283,6 +287,7 @@ function TabInventory:useSelectedItem()
             self:removeItem("fuel", amountToUse)
         end
     elseif slot.item.type == "upgrade" and slot.item.properties.type then
+        print("Applying upgrade", slot.item.properties.type)
         -- Apply upgrade
         local upgradeType = slot.item.properties.type
         
