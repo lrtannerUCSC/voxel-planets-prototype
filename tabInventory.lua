@@ -327,6 +327,7 @@ end
 
 function TabInventory:update(dt)
     if not self.visible then return end
+    self:updateItemAmounts()
     
     -- update invetory position
     self.x = (love.graphics.getWidth() - self.width) / 2
@@ -342,6 +343,26 @@ function TabInventory:update(dt)
         
         self.slots[i].x = startX + col * (SLOT_SIZE + PADDING)
         self.slots[i].y = startY + row * (SLOT_SIZE + PADDING)
+    end
+end
+
+function TabInventory:updateItemAmounts()
+    -- First, clear all slot counts to zero
+    for i, slot in ipairs(self.slots) do
+        if slot.item then
+            slot.count = 0
+        end
+    end
+    
+    -- Then update counts based on player.inventory
+    for itemType, count in pairs(self.player.inventory) do
+        -- First try to add to existing stacks
+        for i, slot in ipairs(self.slots) do
+            if slot.item and slot.item.type == itemType then
+                slot.count = count
+                break
+            end
+        end
     end
 end
 
