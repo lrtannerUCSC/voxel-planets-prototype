@@ -4,6 +4,8 @@ local Entity = require("entity")
 local Planet = require("planet")
 local Player = require("player")
 
+local TabInventory = require("tabinventory")
+
 -- Set random seed based on current time
 math.randomseed(os.time())
 if love.math then
@@ -15,6 +17,7 @@ local world
 local player
 local camera
 local entities = {}
+local inventory
 
 -- Initialize the game
 function love.load()
@@ -30,6 +33,12 @@ function love.load()
     player = Player:new(World.CHUNK_SIZE / 2, World.CHUNK_SIZE / 2)
     table.insert(entities, player)  -- Only the player is global
     camera = { x = 0, y = 0, scale = 1 }
+
+    -- Initialize inventory
+    inventory = TabInventory:new(player)
+    
+    -- Debug: Add sample items to inventory for testing
+    inventory:addSampleItems()
 end
 
 function love.update(dt)
@@ -40,6 +49,11 @@ function love.update(dt)
     -- for _, entity in ipairs(entities) do
     --     entity:update(dt)
     -- end
+
+    -- Inventory update
+    if inventory then
+        inventory:update(dt)
+    end
     
     -- Check player collision with planets from ACTIVE CHUNKS
     for _, chunk in pairs(world.activeChunks) do
@@ -85,6 +99,7 @@ function love.update(dt)
 end
 
 function love.draw()
+    -- First clear the screen with background color
     love.graphics.clear(0.2, 0.2, 0.2)
 
     -- Apply camera transform (this affects all drawing until pop)
@@ -105,19 +120,39 @@ function love.draw()
     -- Draw UI elements (not affected by camera)
     love.graphics.setColor(1, 1, 1)
     love.graphics.print("Voxel Planet Demo - Move with WASD", 10, 10)
-    love.graphics.print("Player Goobs: " .. player.money, love.graphics.getWidth() - 170, 10)
-    love.graphics.print("Player Speed: " .. math.floor(player.currentSpeed), love.graphics.getWidth() - 170, 50)
-    love.graphics.print("Player Fuel: " .. math.floor(player.fuel) .. " / " .. player.maxFuel, love.graphics.getWidth() - 170, 90)
-    love.graphics.print("Player engine upgrade: " .. math.floor(player.engineUpgrade), love.graphics.getWidth() - 170, 120)
-    love.graphics.print("Player armor upgrade: " .. math.floor(player.armorUpgrade), love.graphics.getWidth() - 170, 150)
-    love.graphics.print("Player fuel upgrade: " .. math.floor(player.fuelUpgrade), love.graphics.getWidth() - 170, 180)
-    love.graphics.print("Player drill upgrade: " .. math.floor(player.drillUpgrade), love.graphics.getWidth() - 170, 210)
+    love.graphics.print("Player Goobs: " .. player.money, love.graphics.getWidth() - 150, 10)
+    love.graphics.print("Player Speed: " .. math.floor(player.currentSpeed), love.graphics.getWidth() - 150, 50)
+    love.graphics.print("Press TAB to toggle inventory", 10, 30)
+
+    -- Draw inventory LAST so it appears on top of everything else
+    if inventory then
+        inventory:draw()
+    end
 end
 
--- Input handling
+-- inventory keyboard input handling
 function love.keypressed(key)
     if key == "escape" then
         love.event.quit()
+    elseif key == "tab" then
+        -- inventory visibility
+        if inventory then
+            inventory:toggle()
+            print("Inventory toggled. Visible: " .. tostring(inventory.visible)) -- Debug print
+        end
+    end
+    
+
+    if inventory and inventory.visible then
+        inventory:keypressed(key)
+    end
+end
+
+-- inventory mouse input
+function love.mousepressed(x, y, button)
+
+    if inventory and inventory.visible then
+        inventory:mousepressed(x, y, button)
     end
 end
 

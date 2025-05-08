@@ -27,14 +27,14 @@ function Cell:draw()
 end
 
 function Cell:checkCollision(other)
-    -- Precise AABB collision using Entity's method
+
     return Entity.checkCollision(self, other)
 end
 
 function Cell:onCollision(other)
     if self.health > 0 then
         if other.type == "player" then    
-            -- Damage cell based on drill power
+            -- Damage cell based on drill 
             self.health = math.max(0, self.health - other.drillPower)
 
             if self.health <= 0 then
@@ -52,7 +52,7 @@ function Cell:onCollision(other)
 
             -- Check cell is solid
             if self.solid then
-                -- Apply temporary speed reduction (0.5 seconds)
+                -- temporary speed reduction (0.5 seconds)
                 other.speedReductionTimer = 1
                 
                 -- Push other out of collision
@@ -82,6 +82,35 @@ function Cell:onCollision(other)
         end
     end
     return false
+end
+
+function Cell:onCollision(player)
+    -- If already destroyed or not colliding, do nothing
+    if self.health <= 0 then return end
+    
+    -- Apply damage based on players drill 
+    self.health = self.health - player.drillPower * love.timer.getDelta()
+    
+    -- if cell is destroyed add resource to players inventory
+    if self.health <= 0 then
+        -- Determine resource type based on cell type
+        local resourceType = self.type -- "core", "mantel", or "crust"
+        local amount = 1
+        
+        -- Add to players inventory
+        if player.addResource then
+            player.addResource(resourceType, amount)
+        end
+        
+        -- Add money
+        if self.type == "core" then
+            player.money = player.money + 15
+        elseif self.type == "mantel" then
+            player.money = player.money + 5
+        elseif self.type == "crust" then
+            player.money = player.money + 2
+        end
+    end
 end
 
 return Cell
