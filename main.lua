@@ -23,7 +23,7 @@ local inventory
 function love.load()
     entities = {}  -- Clear global table
     love.entities = entities
-    love.window.setMode(1280, 720)
+    love.window.setMode(1920, 1080)
     math.randomseed(os.time())
 
     world = World:new()

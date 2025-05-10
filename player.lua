@@ -12,7 +12,7 @@ function Player:new(x, y)
     instance.velocity = {x = 0, y = 0}
     instance.facingAngle = 0  -- In radians
     instance.rotationSpeed = 4  -- How fast the player turns
-    instance.thrustForce = 400
+    instance.thrustForce = 1250
     instance.maxSpeed = 400
     instance.damping = 0.96
     instance.currentSpeed = 0

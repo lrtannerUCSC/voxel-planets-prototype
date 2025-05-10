@@ -75,17 +75,20 @@ function TabInventory:addItem(itemType, amount, properties)
     amount = amount or 1
     properties = properties or {}
     
-    -- Check if the item already exists in inventory
+    -- Update player.inventory
+    self.player.inventory[itemType] = (self.player.inventory[itemType] or 0) + amount
+    
+    -- Update visual slots
     if itemType ~= "upgrade" then  
         for i, slot in ipairs(self.slots) do
             if slot.item and slot.item.type == itemType then
-                slot.count = slot.count + amount
+                slot.count = self.player.inventory[itemType]
                 return true
             end
         end
     end
     
-    -- Find an empty slot
+    -- Find an empty slot for new items
     for i, slot in ipairs(self.slots) do
         if not slot.item then
             slot.item = {
@@ -97,7 +100,6 @@ function TabInventory:addItem(itemType, amount, properties)
         end
     end
     
-    -- Inventory is full
     return false
 end
 
@@ -105,6 +107,11 @@ end
 function TabInventory:removeItem(itemType, amount)
     amount = amount or 1
     
+    -- Check if we have enough first
+    if not self.player.inventory[itemType] or self.player.inventory[itemType] < amount then
+        return false
+    end
+
     for i, slot in ipairs(self.slots) do
         if slot.item and slot.item.type == itemType then
             if slot.count > amount then
@@ -280,7 +287,7 @@ function TabInventory:useSelectedItem()
     if slot.item.type == "fuel" then
         -- Refill player's fuel
         local amountNeeded = self.player.maxFuel - self.player.fuel
-        local amountToUse = math.floor(math.min(slot.count, amountNeeded))
+        local amountToUse = math.min(slot.count, amountNeeded)
         
         if amountToUse > 0 then
             self.player.fuel = self.player.fuel + amountToUse
@@ -288,20 +295,43 @@ function TabInventory:useSelectedItem()
         end
     elseif slot.item.type == "upgrade" and slot.item.properties.type then
         print("Applying upgrade", slot.item.properties.type)
-        -- Apply upgrade
+        
+        -- Get upgrade cost from properties
+        local material = slot.item.properties.material
+        local requiredAmount = slot.item.properties.amount or 0
         local upgradeType = slot.item.properties.type
         
-        if upgradeType == "engine" then
-            self.player.engineUpgrade = (self.player.engineUpgrade or 0) + 1
-        elseif upgradeType == "armor" then
-            self.player.armorUpgrade = (self.player.armorUpgrade or 0) + 1
-        elseif upgradeType == "fuel" then
-            self.player.fuelUpgrade = (self.player.fuelUpgrade or 0) + 1
-        elseif upgradeType == "drill" then
-            self.player.drillUpgrade = (self.player.drillUpgrade or 0) + 1
+        -- Check current amount of material
+        local currentAmount = 0
+        for i, s in ipairs(self.slots) do
+            if s.item and s.item.type == material then
+                currentAmount = s.count
+                break
+            end
         end
         
-        self:removeItem("upgrade", 1)
+        -- Check if player has enough materials
+        if currentAmount >= requiredAmount then
+            -- Deduct materials
+            self:removeItem(material, requiredAmount)
+            
+            -- Apply the upgrade
+            if upgradeType == "engine" then
+                self.player.engineUpgrade = (self.player.engineUpgrade or 0) + 1
+            elseif upgradeType == "armor" then
+                self.player.armorUpgrade = (self.player.armorUpgrade or 0) + 1
+            elseif upgradeType == "fuel" then
+                self.player.fuelUpgrade = (self.player.fuelUpgrade or 0) + 1
+            elseif upgradeType == "drill" then
+                self.player.drillUpgrade = (self.player.drillUpgrade or 0) + 1
+            end
+            
+            -- Remove the upgrade item
+            self:removeItem("upgrade", 1)
+            print(string.format("Upgrade applied! Used %d %s", requiredAmount, material))
+        else
+            print(string.format("Not enough %s (need %d, have %d)", material, requiredAmount, currentAmount))
+        end
     end
 end
 
@@ -321,6 +351,14 @@ function TabInventory:getItemDescription(itemType)
         upgrade = "Improves one of your ship's systems. Press E to install."
     }
     
+    if itemType == "upgrade" then
+        local item = self.slots[self.selectedSlot].item
+        local desc = descriptions.upgrade .. "\nType: " .. (item.properties.type or "unknown")
+        if item.properties.material then
+            desc = desc .. "\nCost: " .. item.properties.amount .. " " .. item.properties.material
+        end
+        return desc
+    end
     return descriptions[itemType] or "No description available."
 end
 
@@ -347,20 +385,13 @@ function TabInventory:update(dt)
 end
 
 function TabInventory:updateItemAmounts()
-    -- First, clear all slot counts to zero
+    -- Ensure slots match player.inventory counts
     for i, slot in ipairs(self.slots) do
         if slot.item then
-            slot.count = 0
-        end
-    end
-    
-    -- Then update counts based on player.inventory
-    for itemType, count in pairs(self.player.inventory) do
-        -- First try to add to existing stacks
-        for i, slot in ipairs(self.slots) do
-            if slot.item and slot.item.type == itemType then
-                slot.count = count
-                break
+            slot.count = self.player.inventory[slot.item.type] or 0
+            if slot.count <= 0 then
+                slot.item = nil
+                slot.count = 0
             end
         end
     end
@@ -397,13 +428,13 @@ end
 
 -- Can put any item we want below for inventory tests
 function TabInventory:addSampleItems()
-    self:addItem("ore", 10)
-    self:addItem("fuel", 5)
-    self:addItem("core", 2)
-    self:addItem("mantel", 8)
-    self:addItem("crust", 15)
-    self:addItem("upgrade", 1, {type = "engine"})
-    self:addItem("upgrade", 1, {type = "drill"})
+    self:addItem("core", 10)
+    self:addItem("mantel", 10)
+    self:addItem("crust", 10)
+    self:addItem("upgrade", 1, {type = "engine", material = "core", amount = 10})
+    self:addItem("upgrade", 1, {type = "armor", material = "crust", amount = 10})
+    self:addItem("upgrade", 1, {type = "drill", material = "mantel", amount = 10})
+    self:addItem("upgrade", 1, {type = "fuel", material = "mantel", amount = 5})
     print("Sample items added to inventory")
 end
 

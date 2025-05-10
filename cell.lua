@@ -45,7 +45,7 @@ function Cell:onCollision(other)
                 -- Add to players inventory
                 if other.addResource then
                     other.addResource(resourceType, amount)
-                    print("Added " .. amount .. " " .. resourceType .. " to player inventory")
+                    -- print("Added " .. amount .. " " .. resourceType .. " to player inventory")
                 end
                 
                 local moneyEarned
