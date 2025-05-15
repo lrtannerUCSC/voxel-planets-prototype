@@ -8,6 +8,15 @@ function Player:new(x, y)
     local instance = Entity:new(x, y)
     setmetatable(instance, self)
     
+    -- Load the sprite
+    instance.sprite = love.graphics.newImage("sprites/Main Ship/Main Ship - Bases/PNGs/Main Ship - Base - Full health.png")
+    
+    -- Set origin to the center of the sprite for proper rotation
+    instance.spriteWidth = instance.sprite:getWidth()
+    instance.spriteHeight = instance.sprite:getHeight()
+    instance.spriteOriginX = instance.spriteWidth / 2
+    instance.spriteOriginY = instance.spriteHeight / 2
+    
     -- Movement properties
     instance.velocity = {x = 0, y = 0}
     instance.facingAngle = 0  -- In radians
@@ -24,14 +33,16 @@ function Player:new(x, y)
     
     -- Visual properties
     instance.thrustLineLength = 50
+    -- Keep ship shape for collision detection
     instance.shipShape = {  -- Triangle pointing right
         10, 0, -5, -6, -5, 6
     }
     
     -- Gameplay properties
     instance.type = "player"
-    instance.width = 16
-    instance.height = 16
+    -- Update width and height based on sprite dimensions
+    instance.width = instance.spriteWidth
+    instance.height = instance.spriteHeight
     instance.color = {1, 1, 1}
     instance.health = 100
     instance.drillPower = 25
@@ -68,9 +79,20 @@ function Player:new(x, y)
     instance.baseMaxFuel = instance.maxFuel
     instance.baseDrillPower = instance.drillPower
     
+    -- Engine effect sprite (CURRENTLY BROKEN)
+    instance.engineEffect = nil
+    instance.showEngineEffect = false
+    
+
+    local success, err = pcall(function()
+        instance.engineEffect = love.graphics.newImage("sprites/Main Ship/Main Ship - Engine Effects/PNGs/Main Ship - Engines - Base Engine - Powering.png")
+    end)
+    if not success then
+        print("Engine effect not loaded: " .. (err or "unknown error"))
+    end
 
     instance.addResource = function(resourceType, amount)
-        -- Initialize inventory table if it doesn't exist
+        -- Initialize inventory 
         instance.inventory = instance.inventory or {}
         
         -- Check if resource already exists in inventory
@@ -96,6 +118,7 @@ function Player:update(dt, world)
     self.facingAngle = math.atan2(dy, dx)
     
     -- Thrust control
+    self.showEngineEffect = false -- Reset engine effect
     if love.keyboard.isDown("w") or love.mouse.isDown(1) then
         local currentTime = love.timer.getTime()
         if currentTime - self.fuelTimer > self.fuelCooldown then
@@ -106,10 +129,9 @@ function Player:update(dt, world)
                 local thrustY = math.sin(self.facingAngle) * self.thrustForce * dt
                 self.velocity.x = self.velocity.x + thrustX
                 self.velocity.y = self.velocity.y + thrustY
+                self.showEngineEffect = true -- Show engine effect when thrusting
             end
-            
         end
-        
     end
     
     -- Get gravity from WORLD INSTANCE
@@ -148,12 +170,33 @@ function Player:draw()
     love.graphics.translate(self.x, self.y)
     love.graphics.rotate(self.facingAngle)
     
-    -- Ship body (triangle)
-    love.graphics.setColor(self.color)
-    love.graphics.polygon("fill", self.shipShape)
+    -- Draw engine effect behind the ship if thrusting
+    if self.showEngineEffect and self.engineEffect then
+        love.graphics.setColor(1, 1, 1)
+        -- Position engine effect behind the ship
+        love.graphics.draw(
+            self.engineEffect, 
+            -self.spriteWidth/2, -- Position behind ship
+            0, -- Centered vertically
+            0, -- No rotation needed (relative to ship)
+            1, 1, -- Scale factors
+            self.engineEffect:getWidth()/2, -- Center horizontally
+            self.engineEffect:getHeight()/2 -- Center vertically
+        )
+    end
     
-    -- Thrust flame (when thrusting)
-    if love.keyboard.isDown("w") or love.mouse.isDown(1) then
+    -- Draw the ship sprite
+    love.graphics.setColor(self.color)
+    love.graphics.draw(
+        self.sprite, 
+        0, 0, -- Draw at origin (which is now at ship's position)
+        0, -- No additional rotation (we've already rotated everything)
+        1, 1, -- Scale factors
+        self.spriteOriginX, self.spriteOriginY -- Center the sprite
+    )
+    
+    -- Alternative thruster effect (if engine sprite failed to load)
+    if self.showEngineEffect and not self.engineEffect then
         love.graphics.setColor(1, 0.7, 0.3)
         love.graphics.line(0, 0, -self.thrustLineLength, 0)
         love.graphics.line(0, -3, -self.thrustLineLength*0.7, 0)
